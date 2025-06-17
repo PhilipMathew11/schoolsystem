@@ -201,11 +201,21 @@ func updateStudent(c *gin.Context) {
 
 func deleteStudent(c *gin.Context) {
 	id := c.Param("id")
-	_, err := db.Exec("DELETE FROM student WHERE student_id=?", id)
+	fmt.Println("Trying to delete student ID:", id)
+
+	res, err := db.Exec("DELETE FROM student WHERE student_id=?", id)
 	if err != nil {
+		fmt.Println("Error while deleting:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete student"})
 		return
 	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No student found with the given ID"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully"})
 }
 
