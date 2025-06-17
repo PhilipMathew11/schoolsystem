@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add or Update Marks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #283c86, #45a247);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 50px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    form {
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 10px;
+    }
+
+    .dropdown {
+      position: relative;
+      width: 100%;
+    }
+
+    #studentSearch {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 0;
+    }
+
+    .dropdown-list {
+      position: absolute;
+      background-color: white;
+      color: black;
+      width: 100%;
+      max-height: 150px;
+      overflow-y: auto;
+      border-radius: 5px;
+      z-index: 1000;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: none;
+      border: 1px solid #ccc;
+    }
+
+    .dropdown-list li {
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .dropdown-list li:hover {
+      background-color: #eee;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #1abc9c;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #16a085;
+    }
+
+    .back {
+      margin-top: 20px;
+      color: white;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add or Update Marks</h1>
+  <form id="marksForm">
+    <label for="studentSearch">Student</label>
+    <div class="dropdown" id="studentDropdownWrapper">
+      <input type="text" id="studentSearch" placeholder="Search Student..." autocomplete="off" />
+      <ul id="studentList" class="dropdown-list"></ul>
+      <input type="hidden" id="student" required />
+    </div>
+
+    <label for="subject">Subject</label>
+    <select id="subject" required></select>
+
+    <label for="marks">Marks Obtained</label>
+    <input type="number" id="marks" min="0" max="100" required />
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <div class="back" onclick="location.href='marks.html'">← Back to Manage Marks</div>
+
+  <script>
+    let allStudents = [];
+    const studentSearch = document.getElementById("studentSearch");
+    const studentList = document.getElementById("studentList");
+    const studentHiddenInput = document.getElementById("student");
+
+    // Fetch students
+    fetch("http://localhost:9091/students")
+      .then(res => res.json())
+      .then(data => {
+        allStudents = data;
+        showStudentList(data);
+      });
+
+    function showStudentList(students) {
+      studentList.innerHTML = "";
+      students.forEach(student => {
+        const li = document.createElement("li");
+        li.textContent = student.student_name;
+        li.dataset.id = student.student_id;
+        studentList.appendChild(li);
+      });
+    }
+
+    studentSearch.addEventListener("focus", () => {
+      studentList.style.display = "block";
+    });
+
+    studentSearch.addEventListener("input", () => {
+      const searchTerm = studentSearch.value.toLowerCase();
+      const filtered = allStudents.filter(student =>
+        student.student_name.toLowerCase().includes(searchTerm)
+      );
+      showStudentList(filtered);
+      studentList.style.display = "block";
+    });
+
+    studentList.addEventListener("click", e => {
+      if (e.target.tagName === "LI") {
+        studentSearch.value = e.target.textContent;
+        studentHiddenInput.value = e.target.dataset.id;
+        studentList.style.display = "none";
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!document.getElementById("studentDropdownWrapper").contains(e.target)) {
+        studentList.style.display = "none";
+      }
+    });
+
+    // Fetch subjects
+    fetch("http://localhost:9091/subjects")
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(subject => {
+          const option = document.createElement("option");
+          option.value = subject.subject_id;
+          option.textContent = subject.subject_name;
+          document.getElementById("subject").appendChild(option);
+        });
+      });
+
+    // Form submission
+    document.getElementById("marksForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const student_id = studentHiddenInput.value;
+      const subject_id = document.getElementById("subject").value;
+      const marks_obtained = document.getElementById("marks").value;
+
+      if (!student_id) {
+        alert("Please select a valid student.");
+        return;
+      }
+
+      fetch("http://localhost:9091/marks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id, subject_id, marks_obtained })
+      })
+        .then(res => res.json())
+        .then(data => {
+          alert("Marks saved successfully!");
+          document.getElementById("marksForm").reset();
+        })
+        .catch(error => {
+          console.error("Error:", error);
+          alert("Failed to save marks.");
+        });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Students</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    form {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    input, select, button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    .search-container {
+      max-width: 500px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+    }
+
+    .search-container input {
+      padding: 10px;
+      font-size: 16px;
+      width: 80%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    table {
+      margin: 30px auto;
+      border-collapse: collapse;
+      width: 80%;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    .pagination {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      padding: 8px 12px;
+      margin: 0 4px;
+      border: none;
+      border-radius: 6px;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .pagination button.disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    td button {
+      padding: 6px 10px;
+      margin-right: 5px;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #2196F3;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+    }
+
+    td button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Manage Students</h1>
+
+  <form onsubmit="event.preventDefault(); submitStudent();">
+    <input type="text" id="name" placeholder="Student Name" required>
+    <input type="number" id="age" placeholder="Age">
+    <select id="gender">
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+    <input type="number" id="classId" placeholder="Class ID">
+    <button type="submit">Add Student</button>
+  </form>
+
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search by student name..." onkeyup="searchStudents()">
+  </div>
+
+  <table id="studentsTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Gender</th>
+        <th>Class ID</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="studentTableBody"></tbody>
+  </table>
+
+  <div class="pagination" id="paginationControls"></div>
+
+  <script>
+    let allStudents = [];
+    let fullList = [];
+    let currentPage = 1;
+    const studentsPerPage = 5;
+    let editingStudentId = null;
+
+    async function fetchStudents() {
+      try {
+        const res = await fetch('http://localhost:9091/students');
+        const data = await res.json();
+        fullList = data;
+        allStudents = [...fullList];
+        displayStudents();
+        setupPagination();
+      } catch (err) {
+        console.error('Error fetching students:', err);
+      }
+    }
+
+    function displayStudents() {
+      const tableBody = document.getElementById('studentTableBody');
+      tableBody.innerHTML = '';
+
+      const start = (currentPage - 1) * studentsPerPage;
+      const end = start + studentsPerPage;
+      const studentsToShow = allStudents.slice(start, end);
+
+      studentsToShow.forEach(student => {
+        const row = `
+          <tr>
+            <td>${student.student_id}</td>
+            <td>${student.student_name}</td>
+            <td>${student.Age}</td>
+            <td>${student.Gender}</td>
+            <td>${student.class_id}</td>
+            <td>
+              <button class="edit-btn" onclick="editStudent(${student.student_id})">Edit</button>
+              <button class="delete-btn" onclick="deleteStudent(${student.student_id})">Delete</button>
+            </td>
+          </tr>`;
+        tableBody.innerHTML += row;
+      });
+    }
+
+    function setupPagination() {
+      const pagination = document.getElementById('paginationControls');
+      pagination.innerHTML = '';
+
+      const totalPages = Math.ceil(allStudents.length / studentsPerPage);
+
+      const prevBtn = `<button ${currentPage === 1 ? 'class="disabled"' : ''} onclick="changePage(${currentPage - 1})">Previous</button>`;
+      const nextBtn = `<button ${currentPage === totalPages ? 'class="disabled"' : ''} onclick="changePage(${currentPage + 1})">Next</button>`;
+
+      pagination.innerHTML += prevBtn;
+
+      for (let i = 1; i <= totalPages; i++) {
+        pagination.innerHTML += `<button ${i === currentPage ? 'style="background:#2e7d32;"' : ''} onclick="changePage(${i})">${i}</button>`;
+      }
+
+      pagination.innerHTML += nextBtn;
+    }
+
+    function changePage(page) {
+      const totalPages = Math.ceil(allStudents.length / studentsPerPage);
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      displayStudents();
+      setupPagination();
+    }
+
+    async function submitStudent() {
+      const name = document.getElementById('name').value;
+      const age = parseInt(document.getElementById('age').value);
+      const gender = document.getElementById('gender').value;
+      const classId = parseInt(document.getElementById('classId').value);
+
+      const student = {
+        student_name: name,
+        Age: age,
+        Gender: gender,
+        class_id: classId
+      };
+
+      try {
+        let url = 'http://localhost:9091/students';
+        let method = 'POST';
+
+        if (editingStudentId) {
+          url = `http://localhost:9091/students/${editingStudentId}`;
+          method = 'PUT';
+        }
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(student)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Server error:", result);
+          alert("Failed to save student.");
+          return;
+        }
+
+        alert(editingStudentId ? 'Student updated!' : 'Student added!');
+        document.querySelector("form").reset();
+        document.querySelector("form button").textContent = "Add Student";
+        editingStudentId = null;
+
+        fetchStudents();
+      } catch (error) {
+        console.error('Fetch error:', error);
+        alert('Error saving student.');
+      }
+    }
+
+    function editStudent(id) {
+      const student = allStudents.find(s => s.student_id === id);
+      if (!student) return;
+
+      document.getElementById('name').value = student.student_name;
+      document.getElementById('age').value = student.Age;
+      document.getElementById('gender').value = student.Gender;
+      document.getElementById('classId').value = student.class_id;
+
+      editingStudentId = id;
+      document.querySelector("form button").textContent = "Update Student";
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm("Are you sure you want to delete this student?")) return;
+
+      try {
+        const response = await fetch(`http://localhost:9091/students/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          alert("Failed to delete student.");
+          return;
+        }
+
+        alert("Student deleted successfully.");
+        fetchStudents();
+      } catch (err) {
+        console.error("Delete error:", err);
+        alert("Error deleting student.");
+      }
+    }
+
+    function searchStudents() {
+      const filter = document.getElementById("searchInput").value.toLowerCase();
+      allStudents = fullList.filter(s =>
+        s.student_name.toLowerCase().includes(filter)
+      );
+      currentPage = 1;
+      displayStudents();
+      setupPagination();
+    }
+
+    fetchStudents();
+  </script>
+
+</body>
+</html>

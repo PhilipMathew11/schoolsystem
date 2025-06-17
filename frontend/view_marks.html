@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>View Student Marks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background-color: #16a085;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .back {
+      margin-top: 20px;
+      text-align: center;
+      color: #00ffff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Student Marks</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Subject</th>
+        <th>Marks</th>
+      </tr>
+    </thead>
+    <tbody id="marksTableBody">
+      <!-- Data will be populated here -->
+    </tbody>
+  </table>
+
+  <div class="back" onclick="location.href='marks.html'">← Back to Manage Marks</div>
+
+  <script>
+    fetch("http://localhost:9091/marks")
+      .then(response => response.json())
+      .then(data => {
+        const tbody = document.getElementById("marksTableBody");
+        tbody.innerHTML = "";
+
+        data.forEach(item => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${item.student_name}</td>
+            <td>${item.subject_name}</td>
+            <td>${item.marks_obtained}</td>
+          `;
+
+          tbody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error("Error fetching marks:", error);
+        alert("Failed to load marks data.");
+      });
+  </script>
+</body>
+</html>
