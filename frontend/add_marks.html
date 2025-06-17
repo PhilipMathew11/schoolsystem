@@ -193,9 +193,9 @@
     document.getElementById("marksForm").addEventListener("submit", function (e) {
       e.preventDefault();
 
-      const student_id = studentHiddenInput.value;
-      const subject_id = document.getElementById("subject").value;
-      const marks_obtained = document.getElementById("marks").value;
+      const student_id = parseInt(studentHiddenInput.value);
+      const subject_id = parseInt(document.getElementById("subject").value);
+      const marks_obtained = parseInt(document.getElementById("marks").value);
 
       if (!student_id) {
         alert("Please select a valid student.");
@@ -207,10 +207,17 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id, subject_id, marks_obtained })
       })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error("Server error or invalid data");
+          }
+          return res.json();
+        })
         .then(data => {
           alert("Marks saved successfully!");
           document.getElementById("marksForm").reset();
+          studentSearch.value = "";
+          studentHiddenInput.value = "";
         })
         .catch(error => {
           console.error("Error:", error);

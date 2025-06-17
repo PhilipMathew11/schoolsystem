@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Teachers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #283c86, #45a247);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 30px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .container {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .form-section {
+      background-color: rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+    }
+
+    .form-section h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      margin-bottom: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #1abc9c;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #16a085;
+    }
+
+    .back {
+      margin-top: 30px;
+      color: white;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Manage Teachers</h1>
+  <div class="container">
+
+    <!-- Add New Teacher Section -->
+    <div class="form-section">
+      <h2>Add New Teacher</h2>
+      <form id="addTeacherForm">
+        <label for="teacherName">Teacher Name</label>
+        <input type="text" id="teacherName" required />
+
+        <label for="subjectSpecialization">Subject Specialization</label>
+        <input type="text" id="subjectSpecialization" required />
+
+        <button type="submit">Add Teacher</button>
+      </form>
+    </div>
+
+    <!-- Assign Teacher Section -->
+    <div class="form-section">
+      <h2>Assign Teacher</h2>
+      <form id="assignTeacherForm">
+        <label for="teacherSelect">Teacher</label>
+        <select id="teacherSelect" required>
+          <option value="">Loading...</option>
+        </select>
+
+        <label for="subjectSelect">Subject</label>
+        <select id="subjectSelect" required>
+          <option value="">Loading...</option>
+        </select>
+
+        <label for="classSelect">Class</label>
+        <select id="classSelect" required>
+          <option value="">Loading...</option>
+        </select>
+
+        <button type="submit">Assign</button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="back" onclick="location.href='teachers.html'">← Back to Manage Teachers</div>
+
+  <script>
+    // Add new teacher
+    document.getElementById("addTeacherForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("teacherName").value;
+      const subject_specialization = document.getElementById("subjectSpecialization").value;
+
+      fetch("http://localhost:9091/teachers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, subject_specialization })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("Teacher added successfully!");
+        document.getElementById("addTeacherForm").reset();
+        loadTeachers(); // refresh dropdown
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to add teacher.");
+      });
+    });
+
+    // Assign teacher
+    document.getElementById("assignTeacherForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const teacher_id = parseInt(document.getElementById("teacherSelect").value);
+      const subject_id = parseInt(document.getElementById("subjectSelect").value);
+      const class_id = parseInt(document.getElementById("classSelect").value);
+
+      fetch("http://localhost:9091/assign-teacher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacher_id, subject_id, class_id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("Teacher assigned successfully!");
+        document.getElementById("assignTeacherForm").reset(); // ✅ fix here
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to assign teacher.");
+      });
+    });
+
+    // Populate dropdowns
+    function loadTeachers() {
+      fetch("http://localhost:9091/teachers")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("teacherSelect");
+          select.innerHTML = `<option value="">Select Teacher</option>`;
+          data.forEach(t => {
+            const option = document.createElement("option");
+            option.value = t.teacher_id;
+            option.textContent = t.name;
+            select.appendChild(option);
+          });
+        });
+    }
+
+    function loadSubjects() {
+      fetch("http://localhost:9091/subjects")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("subjectSelect");
+          select.innerHTML = `<option value="">Select Subject</option>`;
+          data.forEach(s => {
+            const option = document.createElement("option");
+            option.value = s.subject_id;
+            option.textContent = s.subject_name;
+            select.appendChild(option);
+          });
+        });
+    }
+
+    function loadClasses() {
+      fetch("http://localhost:9091/classrooms")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("classSelect");
+          select.innerHTML = `<option value="">Select Class</option>`;
+          data.forEach(c => {
+            const option = document.createElement("option");
+            option.value = c.class_id;
+            option.textContent = c.class_name;
+            select.appendChild(option);
+          });
+        });
+    }
+
+    // Initial loading
+    loadTeachers();
+    loadSubjects();
+    loadClasses();
+  </script>
+</body>
+</html>

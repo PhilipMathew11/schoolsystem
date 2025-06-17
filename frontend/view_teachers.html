@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>View Teacher Assignments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #1f4037, #99f2c8);
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 90%;
+      max-width: 800px;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #16a085;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f2f2f2;
+    }
+
+    .back {
+      margin-top: 20px;
+      text-decoration: underline;
+      color: #0066cc;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Teacher Assignments</h1>
+  <table id="assignmentTable">
+    <thead>
+      <tr>
+        <th>Teacher Name</th>
+        <th>Subject</th>
+        <th>Class</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Data will be inserted here -->
+    </tbody>
+  </table>
+
+  <div class="back" onclick="location.href='teachers.html'">← Back to Manage Teachers</div>
+
+  <script>
+    fetch("http://localhost:9091/teacher-assignments")
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.querySelector("#assignmentTable tbody");
+        tbody.innerHTML = "";
+
+        data.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item.teacher_name}</td>
+            <td>${item.subject_name}</td>
+            <td>${item.class_name}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(error => {
+        console.error("Failed to load teacher assignments:", error);
+      });
+  </script>
+</body>
+</html>

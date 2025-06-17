@@ -47,10 +47,19 @@ func main() {
 	router.POST("/marks", addOrUpdateMark)
 	router.GET("/subjects", getSubjects)
 
+	// Teacher APIs
+	router.POST("/teachers", addTeacher)
+	router.POST("/assign-teacher", assignTeacher)
+	router.GET("/teacher-assignments", getTeacherAssignments)
+	router.GET("/classrooms", GetAllClassrooms)
+	router.GET("/teachers", GetAllTeachers)
+
 	router.Run(":9091")
 }
 
-// ==== Structs ====
+// ==========================
+// Structs (with fixed tags)
+// ==========================
 
 type Student struct {
 	ID     int    `json:"student_id"`
@@ -79,7 +88,21 @@ type MarkInput struct {
 	MarksObtained int `json:"marks_obtained"`
 }
 
-// ==== Auth ====
+type Teacher struct {
+	TeacherID             int    `json:"teacher_id"`
+	Name                  string `json:"name"`
+	SubjectSpecialization string `json:"subject_specialization"`
+}
+
+type Teaches struct {
+	TeacherID int `json:"teacher_id"`
+	SubjectID int `json:"subject_id"`
+	ClassID   int `json:"class_id"`
+}
+
+// ==========
+// Auth APIs
+// ==========
 
 func registerUser(c *gin.Context) {
 	var input struct {
@@ -121,7 +144,9 @@ func loginUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
 }
 
-// ==== Student ====
+// ==================
+// Student APIs
+// ==================
 
 func getStudents(c *gin.Context) {
 	rows, err := db.Query("SELECT student_id, student_name, Age, Gender, class_id FROM student")
@@ -165,7 +190,7 @@ func updateStudent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	_, err := db.Exec(`UPDATE student SET student_name=?, Age=?, Gender=?, class_id=? WHERE student_id=?`,
+	_, err := db.Exec("UPDATE student SET student_name=?, Age=?, Gender=?, class_id=? WHERE student_id=?",
 		s.Name, s.Age, s.Gender, s.Class, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update student"})
@@ -184,15 +209,19 @@ func deleteStudent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully"})
 }
 
-// ==== Marks ====
+// ==============
+// Marks APIs
+// ==============
 
 func getMarks(c *gin.Context) {
-	rows, err := db.Query(`
-		SELECT s.student_name, sub.subject_name, m.marks_obtained
-		FROM marks m
-		JOIN student s ON m.student_id = s.student_id
-		JOIN subject sub ON m.subject_id = sub.subject_id
-	`)
+	query := `
+	SELECT s.student_name, sub.subject_name, m.marks_obtained
+	FROM marks m
+	JOIN student s ON m.student_id = s.student_id
+	JOIN subject sub ON m.subject_id = sub.subject_id
+	`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch marks"})
 		return
@@ -211,7 +240,6 @@ func getMarks(c *gin.Context) {
 			return
 		}
 
-		// Build response map and handle NULLs gracefully
 		result := map[string]interface{}{
 			"student_name":   "",
 			"subject_name":   "",
@@ -240,7 +268,6 @@ func addOrUpdateMark(c *gin.Context) {
 		return
 	}
 
-	// Check if the mark already exists
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM marks WHERE student_id=? AND subject_id=?)", mark.StudentID, mark.SubjectID).Scan(&exists)
 	if err != nil {
@@ -249,7 +276,6 @@ func addOrUpdateMark(c *gin.Context) {
 	}
 
 	if exists {
-		// Update mark
 		_, err = db.Exec("UPDATE marks SET marks_obtained=? WHERE student_id=? AND subject_id=?",
 			mark.MarksObtained, mark.StudentID, mark.SubjectID)
 		if err != nil {
@@ -258,7 +284,6 @@ func addOrUpdateMark(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Mark updated successfully"})
 	} else {
-		// Add mark
 		_, err = db.Exec("INSERT INTO marks (student_id, subject_id, marks_obtained) VALUES (?, ?, ?)",
 			mark.StudentID, mark.SubjectID, mark.MarksObtained)
 		if err != nil {
@@ -269,7 +294,9 @@ func addOrUpdateMark(c *gin.Context) {
 	}
 }
 
-// ==== Subjects ====
+// ================
+// Subjects API
+// ================
 
 func getSubjects(c *gin.Context) {
 	rows, err := db.Query("SELECT subject_id, subject_name FROM subject")
@@ -289,4 +316,128 @@ func getSubjects(c *gin.Context) {
 		subjects = append(subjects, s)
 	}
 	c.JSON(http.StatusOK, subjects)
+}
+
+// ================
+// Teacher APIs
+// ================
+
+func addTeacher(c *gin.Context) {
+	var teacher Teacher
+	if err := c.BindJSON(&teacher); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	_, err := db.Exec("INSERT INTO teacher (name, subject_specialization) VALUES (?, ?)",
+		teacher.Name, teacher.SubjectSpecialization)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert teacher"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Teacher added successfully"})
+}
+
+func assignTeacher(c *gin.Context) {
+	var req struct {
+		TeacherID int `json:"teacher_id"`
+		SubjectID int `json:"subject_id"`
+		ClassID   int `json:"class_id"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	_, err := db.Exec("INSERT INTO teaches (teacher_id, subject_id, class_id) VALUES (?, ?, ?)", req.TeacherID, req.SubjectID, req.ClassID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign teacher"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Teacher assigned successfully"})
+}
+
+
+func getTeacherAssignments(c *gin.Context) {
+	query := `
+	SELECT t.name AS teacher_name, s.subject_name, c.class_name
+	FROM teaches te
+	JOIN teacher t ON te.teacher_id = t.teacher_id
+	JOIN subject s ON te.subject_id = s.subject_id
+	JOIN classroom c ON te.class_id = c.class_id
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch teacher assignments"})
+		return
+	}
+	defer rows.Close()
+
+	type TeacherAssignment struct {
+		TeacherName string `json:"teacher_name"`
+		SubjectName string `json:"subject_name"`
+		ClassName   string `json:"class_name"`
+	}
+
+	var result []TeacherAssignment
+	for rows.Next() {
+		var ta TeacherAssignment
+		if err := rows.Scan(&ta.TeacherName, &ta.SubjectName, &ta.ClassName); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse teacher assignments"})
+			return
+		}
+		result = append(result, ta)
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// ===============
+// Utility APIs
+// ===============
+
+func GetAllTeachers(c *gin.Context) {
+	rows, err := db.Query("SELECT teacher_id, name FROM teacher")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch teachers", "details": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var teachers []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var name string
+		rows.Scan(&id, &name)
+		teachers = append(teachers, gin.H{
+			"teacher_id": id,
+			"name":       name,
+		})
+	}
+
+	c.JSON(200, teachers)
+}
+
+func GetAllClassrooms(c *gin.Context) {
+	rows, err := db.Query("SELECT class_id, class_name FROM classroom")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch classrooms", "details": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var classes []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var name string
+		rows.Scan(&id, &name)
+		classes = append(classes, gin.H{
+			"class_id":   id,
+			"class_name": name,
+		})
+	}
+
+	c.JSON(200, classes)
 }
