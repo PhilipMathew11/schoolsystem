@@ -51,6 +51,17 @@ func main() {
 	router.GET("/classrooms", GetAllClassrooms)
 	router.GET("/teachers", GetAllTeachers)
 
+	router.GET("/stats/summary", getSummaryStats)
+	router.GET("/stats/avg-marks", getAverageMarks)
+	router.GET("/stats/class-distribution", getClassDistribution)
+
+	router.POST("/subjects", addSubject)
+	router.DELETE("/subjects/:id", deleteSubject)
+
+	router.POST("/classrooms", addClass)
+	router.DELETE("/classrooms/:id", deleteClass)
+
+
 	router.Run(":9091")
 }
 
@@ -408,7 +419,7 @@ func GetAllTeachers(c *gin.Context) {
 func GetAllClassrooms(c *gin.Context) {
 	rows, err := db.Query("SELECT class_id, class_name FROM classroom")
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to fetch classrooms", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch classes"})
 		return
 	}
 	defer rows.Close()
@@ -418,11 +429,140 @@ func GetAllClassrooms(c *gin.Context) {
 		var id int
 		var name string
 		rows.Scan(&id, &name)
-		classes = append(classes, gin.H{
-			"class_id":   id,
-			"class_name": name,
-		})
+		classes = append(classes, gin.H{"class_id": id, "class_name": name})
 	}
 
-	c.JSON(200, classes)
+	c.JSON(http.StatusOK, classes)
 }
+
+// GET /stats/summary
+func getSummaryStats(c *gin.Context) {
+	var studentCount, teacherCount, classCount, subjectCount int
+	db.QueryRow("SELECT COUNT(*) FROM student").Scan(&studentCount)
+	db.QueryRow("SELECT COUNT(*) FROM teacher").Scan(&teacherCount)
+	db.QueryRow("SELECT COUNT(*) FROM classroom").Scan(&classCount)
+	db.QueryRow("SELECT COUNT(*) FROM subject").Scan(&subjectCount)
+
+	c.JSON(200, gin.H{
+		"total_students": studentCount,
+		"total_teachers": teacherCount,
+		"total_classes": classCount,
+		"total_subjects": subjectCount,
+	})
+}
+
+// GET /stats/avg-marks
+func getAverageMarks(c *gin.Context) {
+	rows, _ := db.Query(`
+		SELECT s.subject_name, AVG(m.marks_obtained) AS average_marks
+		FROM marks m
+		JOIN subject s ON m.subject_id = s.subject_id
+		GROUP BY s.subject_name
+	`)
+	defer rows.Close()
+
+	var result []map[string]interface{}
+	for rows.Next() {
+		var name string
+		var avg float64
+		rows.Scan(&name, &avg)
+		result = append(result, gin.H{"subject_name": name, "average_marks": avg})
+	}
+
+	c.JSON(200, result)
+}
+
+// GET /stats/class-distribution
+func getClassDistribution(c *gin.Context) {
+	rows, _ := db.Query(`
+		SELECT c.class_name, COUNT(s.student_id) AS student_count
+		FROM classroom c
+		LEFT JOIN student s ON s.class_id = c.class_id
+		GROUP BY c.class_name
+	`)
+	defer rows.Close()
+
+	var result []map[string]interface{}
+	for rows.Next() {
+		var name string
+		var count int
+		rows.Scan(&name, &count)
+		result = append(result, gin.H{"class_name": name, "student_count": count})
+	}
+
+	c.JSON(200, result)
+}
+
+func addSubject(c *gin.Context) {
+	var subject Subject
+	if err := c.BindJSON(&subject); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+	_, err := db.Exec("INSERT INTO subject (subject_name) VALUES (?)", subject.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add subject"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Subject added successfully"})
+}
+
+func deleteSubject(c *gin.Context) {
+	id := c.Param("id")
+	_, err := db.Exec("DELETE FROM subject WHERE subject_id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete subject"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Subject deleted successfully"})
+}
+
+
+
+type Classroom struct {
+    ClassID   int    `json:"class_id"`
+    ClassName string `json:"class_name"`
+}
+
+func addClass(c *gin.Context) {
+    var newClass Classroom
+
+    if err := c.BindJSON(&newClass); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    result, err := db.Exec("INSERT INTO classroom (class_name) VALUES (?)", newClass.ClassName)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Insert failed"})
+        return
+    }
+
+    id, _ := result.LastInsertId()
+    newClass.ClassID = int(id)
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Class added successfully",
+        "class":   newClass,
+    })
+}
+
+
+
+
+
+
+func deleteClass(c *gin.Context) {
+	id := c.Param("id")
+
+	_, err := db.Exec("DELETE FROM classroom WHERE class_id = ?", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete class"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Class deleted successfully"})
+}
+
+
+

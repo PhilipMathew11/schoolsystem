@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Classes</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-delete {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manage Classes</h1>
+
+    <input type="text" id="className" placeholder="Enter Class Name" />
+    <button onclick="addClass()">Add Class</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Class ID</th>
+                <th>Class Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="classTableBody"></tbody>
+    </table>
+
+    <script>
+        const API_URL = "http://localhost:9091";
+
+        async function fetchClasses() {
+            const res = await fetch(`${API_URL}/classrooms`);
+            const classes = await res.json();
+            const table = document.getElementById("classTableBody");
+            table.innerHTML = "";
+            classes.forEach(c => {
+                const row = `<tr>
+                    <td>${c.class_id}</td>
+                    <td>${c.class_name}</td>
+                    <td><button class="btn-delete" onclick="deleteClass(${c.class_id})">Delete</button></td>
+                </tr>`;
+                table.innerHTML += row;
+            });
+        }
+
+        async function addClass() {
+            const name = document.getElementById("className").value;
+            if (!name.trim()) return alert("Class name required");
+
+            const res = await fetch(`${API_URL}/classrooms`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ class_name: name })
+            });
+
+            const data = await res.json();
+            alert(data.message || "Class added");
+            document.getElementById("className").value = "";
+            fetchClasses();
+        }
+
+        async function deleteClass(id) {
+            if (!confirm("Are you sure?")) return;
+
+            const res = await fetch(`${API_URL}/classrooms/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            alert(data.message || "Class deleted");
+            fetchClasses();
+        }
+
+        // Load on start
+        fetchClasses();
+    </script>
+</body>
+</html>

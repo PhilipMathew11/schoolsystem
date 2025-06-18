@@ -3,76 +3,210 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard</title>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      display: flex;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #2c3e50;
       color: white;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-
-    h1 {
-      margin-bottom: 40px;
-      font-size: 36px;
-    }
-
-    .btn-container {
-      display: flex;
-      flex-direction: column;
+      padding: 20px;
       gap: 20px;
-      width: 250px;
     }
 
-    button {
-      padding: 15px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
+    .sidebar h2 {
+      margin-top: 0;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #34495e;
+      transition: background 0.3s;
+      text-align: center;
+    }
+
+    .sidebar a:hover {
+      background-color: #1abc9c;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .header {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      flex: 1;
+      min-width: 200px;
       background-color: #1abc9c;
       color: white;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
-    button:hover {
-      background-color: #16a085;
+    .card h3 {
+      margin: 0;
+      font-size: 20px;
     }
 
-    .logout {
-      margin-top: 40px;
-      color: #ccc;
-      text-decoration: underline;
-      cursor: pointer;
-      font-size: 14px;
+    .card p {
+      font-size: 32px;
+      margin: 10px 0 0;
     }
 
-    .logout:hover {
-      color: #fff;
+    .charts {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .chart-container {
+      flex: 1;
+      min-width: 300px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    canvas {
+      max-width: 100%;
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to the Dashboard</h1>
-  <div class="btn-container">
-    <button onclick="location.href='students.html'">Manage Students</button>
-    <button onclick="location.href='teachers.html'">Manage Teachers</button>
-    <button onclick="location.href='classes.html'">Manage Classes</button>
-    <button onclick="location.href='marks.html'">Manage Marks</button> <!-- ✅ NEW BUTTON -->
+  <div class="sidebar">
+    <h2>School Admin</h2>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="students.html">Manage Students</a>
+    <a href="teachers.html">Manage Teachers</a>
+    <a href="manage_classes.html">Manage Classes</a>
+    <a href="subjects.html">Manage Subjects</a>
+    <a href="marks.html">Manage Marks</a>
+    <a href="login.html" onclick="logout()">Logout</a>
   </div>
-  <div class="logout" onclick="logout()">Logout</div>
+
+  <div class="main">
+    <div class="header">Dashboard Overview</div>
+
+    <!-- Summary Cards -->
+    <div class="cards">
+      <div class="card">
+        <h3>Total Students</h3>
+        <p id="totalStudents">--</p>
+      </div>
+      <div class="card">
+        <h3>Total Teachers</h3>
+        <p id="totalTeachers">--</p>
+      </div>
+      <div class="card">
+        <h3>Total Classes</h3>
+        <p id="totalClasses">--</p>
+      </div>
+      <div class="card">
+        <h3>Total Subjects</h3>
+        <p id="totalSubjects">--</p>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+      <div class="chart-container">
+        <h3>Average Marks by Subject</h3>
+        <canvas id="avgMarksChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Students per Class</h3>
+        <canvas id="studentsPerClassChart"></canvas>
+      </div>
+    </div>
+  </div>
 
   <script>
     function logout() {
-      // Clear user session if any (optional enhancement)
       alert("Logging out...");
-      window.location.href = "login.html";
     }
+
+    // Fetch summary counts
+    fetch("http://localhost:9091/stats/summary")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("totalStudents").textContent = data.total_students;
+        document.getElementById("totalTeachers").textContent = data.total_teachers;
+        document.getElementById("totalClasses").textContent = data.total_classes;
+        document.getElementById("totalSubjects").textContent = data.total_subjects;
+      });
+
+    // Fetch and plot average marks
+    fetch("http://localhost:9091/stats/avg-marks")
+      .then(res => res.json())
+      .then(data => {
+        const labels = data.map(item => item.subject_name);
+        const marks = data.map(item => item.average_marks);
+
+        new Chart(document.getElementById("avgMarksChart"), {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Average Marks",
+              backgroundColor: "#1abc9c",
+              data: marks
+            }]
+          }
+        });
+      });
+
+    // Fetch and plot students per class
+    fetch("http://localhost:9091/stats/class-distribution")
+      .then(res => res.json())
+      .then(data => {
+        const labels = data.map(item => item.class_name);
+        const counts = data.map(item => item.student_count);
+
+        new Chart(document.getElementById("studentsPerClassChart"), {
+          type: "pie",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Students per Class",
+              backgroundColor: ["#3498db", "#f39c12", "#9b59b6", "#2ecc71", "#e74c3c"],
+              data: counts
+            }]
+          }
+        });
+      });
   </script>
 </body>
 </html>

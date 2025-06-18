@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Subjects</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background-color: #f4f4f4; }
+    h1 { color: #333; }
+    input, button { padding: 8px; margin: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #007bff; color: white; }
+    button.delete { background-color: red; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Manage Subjects</h1>
+
+  <input type="text" id="subjectName" placeholder="Enter Subject Name">
+  <button onclick="addSubject()">Add Subject</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Subject ID</th>
+        <th>Subject Name</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="subjectTable"></tbody>
+  </table>
+
+  <script>
+    const api = 'http://localhost:9091';
+
+    function fetchSubjects() {
+      fetch(`${api}/subjects`)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById("subjectTable");
+          tbody.innerHTML = "";
+          data.forEach(sub => {
+            tbody.innerHTML += `
+              <tr>
+                <td>${sub.subject_id}</td>
+                <td>${sub.subject_name}</td>
+                <td><button class="delete" onclick="deleteSubject(${sub.subject_id})">Delete</button></td>
+              </tr>`;
+          });
+        });
+    }
+
+    function addSubject() {
+      const name = document.getElementById("subjectName").value;
+      if (!name) return alert("Enter a subject name");
+      fetch(`${api}/subjects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_name: name })
+      }).then(() => {
+        document.getElementById("subjectName").value = "";
+        fetchSubjects();
+      });
+    }
+
+    function deleteSubject(id) {
+      fetch(`${api}/subjects/${id}`, { method: "DELETE" })
+        .then(() => fetchSubjects());
+    }
+
+    window.onload = fetchSubjects;
+  </script>
+</body>
+</html>
