@@ -32,22 +32,19 @@ func main() {
 	router := gin.Default()
 	router.Use(cors.Default())
 
-	// Authentication
 	router.POST("/register", registerUser)
 	router.POST("/login", loginUser)
 
-	// Student APIs
 	router.GET("/students", getStudents)
 	router.POST("/students", addStudent)
 	router.PUT("/students/:id", updateStudent)
 	router.DELETE("/students/:id", deleteStudent)
 
-	// Marks APIs
+
 	router.GET("/marks", getMarks)
 	router.POST("/marks", addOrUpdateMark)
 	router.GET("/subjects", getSubjects)
 
-	// Teacher APIs
 	router.POST("/teachers", addTeacher)
 	router.POST("/assign-teacher", assignTeacher)
 	router.GET("/teacher-assignments", getTeacherAssignments)
@@ -56,10 +53,6 @@ func main() {
 
 	router.Run(":9091")
 }
-
-// ==========================
-// Structs (with fixed tags)
-// ==========================
 
 type Student struct {
 	ID     int    `json:"student_id"`
@@ -100,9 +93,6 @@ type Teaches struct {
 	ClassID   int `json:"class_id"`
 }
 
-// ==========
-// Auth APIs
-// ==========
 
 func registerUser(c *gin.Context) {
 	var input struct {
@@ -143,10 +133,6 @@ func loginUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
 }
-
-// ==================
-// Student APIs
-// ==================
 
 func getStudents(c *gin.Context) {
 	rows, err := db.Query("SELECT student_id, student_name, Age, Gender, class_id FROM student")
@@ -219,9 +205,6 @@ func deleteStudent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Student deleted successfully"})
 }
 
-// ==============
-// Marks APIs
-// ==============
 
 func getMarks(c *gin.Context) {
 	query := `
@@ -304,9 +287,6 @@ func addOrUpdateMark(c *gin.Context) {
 	}
 }
 
-// ================
-// Subjects API
-// ================
 
 func getSubjects(c *gin.Context) {
 	rows, err := db.Query("SELECT subject_id, subject_name FROM subject")
@@ -328,9 +308,6 @@ func getSubjects(c *gin.Context) {
 	c.JSON(http.StatusOK, subjects)
 }
 
-// ================
-// Teacher APIs
-// ================
 
 func addTeacher(c *gin.Context) {
 	var teacher Teacher
@@ -404,9 +381,7 @@ func getTeacherAssignments(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// ===============
-// Utility APIs
-// ===============
+
 
 func GetAllTeachers(c *gin.Context) {
 	rows, err := db.Query("SELECT teacher_id, name FROM teacher")
